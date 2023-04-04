@@ -1,0 +1,23 @@
+START HHMM
+END   HHMM
+RELAY oooooooo
+
+START HHMM 開始時刻を時分で指定する。但し、HH,MMはHEXで指定する。
+END   HHMM 例えば、23:55は1737(HEX:2bytes)で表現される。
+
+oooooooo リレーのMAKE/BREAKを表現する。左からRLY1,2,3,4,5,6,7,8である。
+　　　　　RLYあたり2bitを使ってMAKE/BREAK/DONT CARE/の３種類の操作を表現する。
+          11: MAKE
+	  10: DON'T CORE
+	  01: NOT ASSIGNED
+	  00: BREAK
+
+
+|------------|-----------|----------|-------------------------|
+|    xxx0    |   xxx2    |          |      xxxE               |
+|------------|-----------|----------|-------------------------|
+| START TIME | END TIME  | RESERVED |            RLY          |
+|  HEX:2byte | HEX:2byte |          | 1  2  3  4  5  6  7  8  |
++------------+-----------+----------+-------------------------+
+|   0A00     |   0A0A    |  FFFFFF  | 11 00 10 10 10 10 10 10 |  10:00-10:10 RLY1=MAKE RLY2=BREAK
+|   0A32     |   0A37    |  FFFFFF  | 11 00 10 10 10 10 10 10 |  10:50-10:55 RLY1=MAKE RLY2=BREAK
