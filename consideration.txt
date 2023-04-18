@@ -1,0 +1,136 @@
+MEMO.txtにかかれているように開始時刻〜終了時刻でリレー間隔とMAKE時間を指定して動作させるプログラムを考える。
+
+1) 最初のリレーをスケジュールすると、ArduinoはRTCに基づいて現在時刻を取得し、次のリレーの開始時間を計算します。リレーをONにして、リレー時間後にリレーをOFFにするためのタイマーも設定されます。
+2) リレーがOFFになると、次のリレーをスケジュールします。
+3) このプロセスは、終了時間に達するまで続きます。ただし、このプログラムは、現在時刻を正確に取得するためにRTCを使用しているため、RTCが正確であることを確認する必要があります。また、NTPサーバーから時刻を同期することもできます。
+
+このプログラムを実行するためには、以下のライブラリが必要です。
+
+Timeライブラリ (https://github.com/PaulStoffregen/Time)
+TimeAlarmsライブラリ (https://github.com/PaulStoffregen/TimeAlarms)
+
+これらのライブラリは、Arduino IDEの「ライブラリを管理する」機能を使用してインストールできます。
+
+
+#include <Time.h>
+#include <TimeAlarms.h>
+
+// リレーピンの設定
+const int relayPin = 13;
+
+// 開始時間、終了時間、リレー間隔、リレー時間を指定
+const char* startTime = "09:00";
+const char* endTime = "18:00";
+const int relayInterval = 30;  // リレー間隔（分）
+const int relayDuration = 5;  // リレー時間（分）
+
+// 次のリレーをスケジュール
+void scheduleNextRelay() {
+  // 次のリレーの開始時間を計算
+  time_t nextRelayTime = now() + (relayInterval * 60);
+  tmElements_t nextRelayElements;
+  breakTime(nextRelayTime, nextRelayElements);
+  nextRelayElements.Second = 0;
+  
+  // 次のリレーの開始時間を設定
+  Alarm.timerOnce(
+    makeTime(nextRelayElements),
+    [](){
+      // リレーをONにする
+      digitalWrite(relayPin, HIGH);
+      
+      // リレー時間後にリレーをOFFにする
+      Alarm.timerOnce(
+        relayDuration * 60,
+        [](){
+          digitalWrite(relayPin, LOW);
+          
+          // 次のリレーをスケジュール
+          scheduleNextRelay();
+        }
+      );
+    }
+  );
+}
+
+void setup() {
+  // ピンの初期化
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
+  
+  // RTCの初期化
+  setTime(0, 0, 0, 1, 1, 2022);  // RTCを初期化
+  setSyncProvider([](){ return time(nullptr); });  // NTPサーバから時刻を同期
+  
+  // 最初のリレーをスケジュール
+  scheduleNextRelay();
+}
+
+void loop() {
+  // Alarmsライブラリの処理
+  Alarm.delay(1000);
+}
+
+
+
+
+
+
+
+堀本の疑い
+
+割り込み的に便利に使えそうなAlarmクラスライブラリは、Timeクラスライブラリと同時に使うのは当たり前として、RTCライブラリと同時に使えるのかは要確認。
+ただし、使えないと絶対時刻と比較して使うので重要なポイントである。
+
+RTCがI2Cライブラリを使っているので、Alarmと競合するか
+
+Ethernet2ライブラリと競合するか、あきらかに割り込み部分があやしい。
+
+Ethernet2.cppの以下の部分
+attachInterrupt(interrupt, isr_, FALLING);
+これがみそっぽい。
+
+loopの中にdelay関数を要求したりするのであまりAlarmsは使いたくない。
+
+// 開始時間
+int startHour = 9;
+int startMinute = 0;
+
+// 終了時間
+int endHour = 17;
+int endMinute = 0;
+
+// X分ごとの間隔
+int interval = 10;
+
+// Y分間リレーをONする時間
+int relayOnTime = 5;
+
+// リレーを制御するピン番号
+int relayPin = 3;
+
+void setup() {
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
+}
+
+void loop() {
+  // 現在時刻を取得
+  int currentHour = hour();
+  int currentMinute = minute();
+
+  // 開始時間から終了時間までの間であれば、指定した間隔でリレーをON/OFFする
+  if (currentHour >= startHour && currentHour <= endHour) {
+    if (currentMinute % interval == 0) {
+      digitalWrite(relayPin, HIGH);
+      delay(relayOnTime * 1000);
+      digitalWrite(relayPin, LOW);
+    }
+  }
+  
+  // 1分待機
+  delay(60000);
+}
+
+使わない単純な方法。
+時間は比較するけど、これでは半端な分刻みではうまく動かせない。
