@@ -3,7 +3,7 @@
 #if _M304_H_V < 101
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.01";
+char *pgname = "Kansui Ver0.05";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -35,13 +35,14 @@ void setup(void) {
     st_m.gw = Ethernet.gatewayIP();
     st_m.ip = Ethernet.localIP();
     st_m.dns = Ethernet.dnsServerIP();
-    cposx = 2;
+    cposx = 3;
     lcdd.IPWrite(0,cposx,2,st_m.ip);
   }
 }
 
 
 void loop(void) {
+  bool cf;
   int z,id,hr,mi,mx,io;
   char ca,line1[21];
   static char pca;
@@ -50,16 +51,19 @@ void loop(void) {
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
-  RTC.read(tm);
-  
   switch(cmode) {
   case RUN:
-    if (prvsec!=tm.Second) {
-      prvsec = tm.Second;
-      snprintf(line1,21,"%d/%02d/%02d  %02d:%02d:%02d",
-               tm.Year+1970,tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
-      lcdd.setLine(0,1,line1);
+    if (RTC.read(tm)==0) {
+      lcdd.setLine(0,1,"NO RTC PLS SETUP    ");
       lcdd.LineWrite(0,1);
+    } else {
+      if (prvsec!=tm.Second) {
+	prvsec = tm.Second;
+	snprintf(line1,21,"%d/%02d/%02d  %02d:%02d:%02d",
+		 tm.Year+1970,tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
+	lcdd.setLine(0,1,line1);
+	lcdd.LineWrite(0,1);
+      }
     }
     ptr_crosskey = getCrossKey();
     if (ptr_crosskey->longf==true) {
@@ -70,6 +74,7 @@ void loop(void) {
     break;
 //################################################################
   case CMND1ST:
+    cmode=CMND;
     lcdd.noBlink();
     lcdd.setLine(0,0,"Choose Menu         ");
     lcdd.setLine(0,2,"UP/DOWN/ENT Key use ");
@@ -89,17 +94,51 @@ void loop(void) {
       lcdd.blink();
       break;
     }
+    cf = false;
     if (ptr_crosskey->kpos & K_UP) {
       ptr_crosskey->kpos &= ~K_UP;
       cmenu++;
       if (cmenu>SCHCONFIG) cmenu=NETCONFIG;
+      cf = true;
+      Serial.begin(115200);
+      Serial.println("cmode=CMND,K_UP");
+      Serial.print("cmenu=");
+      Serial.println(cmenu);
+      Serial.end();
       break;
     }
     if (ptr_crosskey->kpos & K_DOWN) {
       ptr_crosskey->kpos &= ~K_DOWN;
       cmenu--;
       if (cmenu<NETCONFIG) cmenu=SCHCONFIG;
+      cf = true;
+      Serial.begin(115200);
+      Serial.println("cmode=CMND,K_DOWN");
+      Serial.print("cmenu=");
+      Serial.println(cmenu);
+      Serial.end();
       break;
+    }
+    if (ptr_crosskey->kpos & K_ENT) {
+      ptr_crosskey->kpos &= ~K_ENT;
+      switch(cmenu) {
+      case SCHCONFIG:
+	cmode = UTIL1ST;
+	break;
+      default:
+	lcdd.clear();
+	cmode = RUN;
+	break;
+      }
+      ptr_crosskey->kpos=0;
+      Serial.begin(115200);
+      Serial.println("cmode=CMND,K_END");
+      Serial.print("cmenu=");
+      Serial.println(cmenu);
+      Serial.end();
+      lcdd.clear();
+      lcdd.blink();
+      return;
     }
     switch(cmenu) {
     case NETCONFIG: // NET CONFIG
@@ -112,11 +151,12 @@ void loop(void) {
       lcdd.setLine(0,1,"  SCHEDULE config   ");
       break;
     }
-    lcdd.LineWrite(0,1);
+    if (cf) lcdd.LineWrite(0,1);
     break;
 //################################################################
   case UTIL1ST:
     cmode = UTIL;
+    lcdd.setLine(0,0,"Set Timer           ");
     lcdd.setLine(0,1,"01 00:00 00:00 00-00");
     lcdd.setLine(0,2,"00000000       OK/NG");
     cposp = 0;
@@ -251,13 +291,7 @@ int InputArithA(int p,int x,int y,int w,int min,int max,bool zp) {
   int v,va,i;
   static int pv=-1000;
   va = analogRead(SELECT_VR);
-  //  lcdd.setCursor(0,2);
-  //  lcdd.print(va);
   v = map(va,0,1023,min,max);
-  //  lcdd.setCursor(5,2);
-  //  lcdd.print(v);
-  //  lcdd.setCursor(8,2);
-  //  lcdd.print(pv);
   if (pv!=v) {
     lcdd.IntWrite(p,x,y,w,zp,v);
     pv = v;
