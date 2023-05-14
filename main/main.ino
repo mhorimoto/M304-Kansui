@@ -3,7 +3,7 @@
 #if _M304_H_V < 101
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.05";
+char *pgname = "Kansui Ver0.06";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -92,6 +92,7 @@ void loop(void) {
       ptr_crosskey->kpos=0;
       lcdd.clear();
       lcdd.blink();
+      lcdd.setLine(0,0,pgname);
       break;
     }
     cf = false;
@@ -264,6 +265,10 @@ void loop(void) {
       ptr_crosskey->longf= false;
       ptr_crosskey->kpos = 0;
       cmode = RUN;
+      lcdd.clear();
+      cposy = 0;
+      lcdd.setLine(cposp,cposy,pgname);
+      lcdd.PageWrite(cposp);
     }
     break;
   }
