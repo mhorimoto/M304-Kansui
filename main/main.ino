@@ -1,58 +1,42 @@
 #include <M304.h>
 
-#if _M304_H_V < 101
+#if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.06";
+char *pgname = "Kansui Ver0.07";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
 int cmode=RUN;
 int cmenu=0; // NETCONFIG
+bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
 
 void setup(void) {
   int w;
   m304Init();
-  pinMode(7,OUTPUT);
   lcdd.begin(20,4);
-  lcdd.initWriteArea(0);
-  lcdd.initWriteArea(1);
-  lcdd.cursor();
-  lcdd.blink();
-  lcdd.clear();
-  lcdd.setLine(0,0,pgname);
-  cposp = 0;
-  cposx = 0;
-  cposy = 2;
-  lcdd.PageWrite(cposp);
-  lcdd.setCursor(cposx,cposy);
-  if (Ethernet.begin(st_m.mac)==0) {
-    lcdd.setLine(0,2,"NO IP MODE");
-    lcdd.LineWrite(0,2);
-  } else {
-    lcdd.TextWrite(0,0,2,"IP:");
-    st_m.gw = Ethernet.gatewayIP();
-    st_m.ip = Ethernet.localIP();
-    st_m.dns = Ethernet.dnsServerIP();
-    cposx = 3;
-    lcdd.IPWrite(0,cposx,2,st_m.ip);
-  }
+  pinMode(7,OUTPUT);
+  msgRun1st();
 }
 
 
 void loop(void) {
-  bool cf;
   int z,id,hr,mi,mx,io;
   char ca,line1[21];
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
+  extern void opeSCH(void);
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
   switch(cmode) {
   case RUN:
+    if (fsf) {
+      msgRun1st();
+      fsf = false;
+    }
     if (RTC.read(tm)==0) {
       lcdd.setLine(0,1,"NO RTC PLS SETUP    ");
       lcdd.LineWrite(0,1);
@@ -69,77 +53,57 @@ void loop(void) {
     if (ptr_crosskey->longf==true) {
       ptr_crosskey->longf=false;
       ptr_crosskey->kpos=0;
-      cmode=CMND1ST;
+      cmode=CMND;
+      fsf = true;
     }
     break;
-//################################################################
-  case CMND1ST:
-    cmode=CMND;
-    lcdd.noBlink();
-    lcdd.setLine(0,0,"Choose Menu         ");
-    lcdd.setLine(0,2,"UP/DOWN/ENT Key use ");
-    lcdd.setLine(0,3,"Exit:LEFT Key push  ");
-    cposp = 0;
-    cposx = 0;
-    cposy = 1;
-    lcdd.PageWrite(cposp);
-    lcdd.setCursor(cposx,cposy); // NO NEED break
+    //################################################################
   case CMND:
+    cf = false;
+    if (fsf) {
+      msgCmnd1st();
+      fsf = false;
+      cf = true;
+    }
     ptr_crosskey = getCrossKey();
     if (ptr_crosskey->kpos & K_LEFT) {
       cmode = RUN;
+      fsf = true;
       ptr_crosskey->longf=false;
       ptr_crosskey->kpos=0;
-      lcdd.clear();
-      lcdd.blink();
-      lcdd.setLine(0,0,pgname);
-      break;
     }
-    cf = false;
     if (ptr_crosskey->kpos & K_UP) {
       ptr_crosskey->kpos &= ~K_UP;
       cmenu++;
       if (cmenu>SCHCONFIG) cmenu=NETCONFIG;
       cf = true;
-      Serial.begin(115200);
-      Serial.println("cmode=CMND,K_UP");
-      Serial.print("cmenu=");
-      Serial.println(cmenu);
-      Serial.end();
-      break;
+      debugSerialOut(cmode,cmenu,"K_UP");      
     }
     if (ptr_crosskey->kpos & K_DOWN) {
       ptr_crosskey->kpos &= ~K_DOWN;
       cmenu--;
       if (cmenu<NETCONFIG) cmenu=SCHCONFIG;
       cf = true;
-      Serial.begin(115200);
-      Serial.println("cmode=CMND,K_DOWN");
-      Serial.print("cmenu=");
-      Serial.println(cmenu);
-      Serial.end();
-      break;
+      debugSerialOut(cmode,cmenu,"K_DOWN");      
     }
     if (ptr_crosskey->kpos & K_ENT) {
       ptr_crosskey->kpos &= ~K_ENT;
+      fsf   = true;
       switch(cmenu) {
+      case NETCONFIG:
+	cmode = NETCMND;
+	break;
+      case RTCCONFIG:
+	cmode = RTCCMND;
+	break;
       case SCHCONFIG:
-	cmode = UTIL1ST;
+	cmode = SCHCMND;
 	break;
       default:
 	lcdd.clear();
 	cmode = RUN;
 	break;
       }
-      ptr_crosskey->kpos=0;
-      Serial.begin(115200);
-      Serial.println("cmode=CMND,K_END");
-      Serial.print("cmenu=");
-      Serial.println(cmenu);
-      Serial.end();
-      lcdd.clear();
-      lcdd.blink();
-      return;
     }
     switch(cmenu) {
     case NETCONFIG: // NET CONFIG
@@ -152,124 +116,14 @@ void loop(void) {
       lcdd.setLine(0,1,"  SCHEDULE config   ");
       break;
     }
-    if (cf) lcdd.LineWrite(0,1);
+    if (cf) {
+      lcdd.LineWrite(0,1);
+      cf = false;
+    }
     break;
-//################################################################
-  case UTIL1ST:
-    cmode = UTIL;
-    lcdd.setLine(0,0,"Set Timer           ");
-    lcdd.setLine(0,1,"01 00:00 00:00 00-00");
-    lcdd.setLine(0,2,"00000000       OK/NG");
-    cposp = 0;
-    cposx = 0;
-    cposy = 1;
-    lcdd.PageWrite(cposp);
-    lcdd.setCursor(cposx,cposy); // NO NEED break
-  case UTIL:
-    if ((ptr_crosskey->kpos & (K_RIGHT | K_LEFT))==(K_RIGHT|K_LEFT)) {
-      lcdd.setCursor(0,3);
-      lcdd.print("BOTH ON");
-      delay(1000);
-      ptr_crosskey->kpos = 0;
-      lcdd.setCursor(0,3);
-      lcdd.print("       ");
-    }
-    if (ptr_crosskey->kpos & K_RIGHT) {
-      cposx++;
-      if (cposx>=20) {
-        cposx=0;
-        cposy++;
-        if (cposy>3) cposy=1;
-      }
-      ptr_crosskey->kpos &= ~K_RIGHT;  // Reset Flag
-      if (cposy==1) {
-        switch(cposx) {
-        case 2:
-        case 5:
-        case 8:
-        case 11:
-        case 14:
-        case 17:
-          cposx++;
-        }
-      } else if (cposy==2) {
-        if (cposx==8) {
-          cposx+=7;
-        }
-      }
-    }
-    if (ptr_crosskey->kpos & K_LEFT) {
-      cposx--;
-      if (cposx<0) {
-        cposx=19;
-        cposy--;
-        if (cposy<1) cposy=3;
-      }
-      ptr_crosskey->kpos &= ~K_LEFT;  // Reset Flag
-      if (cposy==1) {
-        switch(cposx) {
-        case 2:
-        case 5:
-        case 8:
-        case 11:
-        case 14:
-        case 17:
-          cposx--;
-        }
-      } else if (cposy==2) {
-        if (cposx==14) {
-          cposx-=7;
-        }
-      }
-    }
-    lcdd.setCursor(cposx,cposy);
-    if (cposy==1) {
-      mi = '0';
-      switch(cposx) {
-      case 3:  // Hour
-      case 9:
-        mx = '2';
-        break;
-      case 4:
-      case 10:
-        if (lcdd.CharRead(cposp,cposx-1,cposy)=='2') {
-          mx = '3';
-        } else {
-          mx = '9';
-        }
-        break;
-      case 6:  // Minite
-      case 12:
-      case 15:
-      case 18:
-        mx = '5';
-        break;
-      default:
-        mx = '9';
-      }
-      InputDataButtom(cposp,cposx,cposy,K_DIGIT,ptr_crosskey->kpos,mi,mx);
-    } else if (cposy==2) {
-      if ((cposx>=0)&&(cposx<8)) {
-        mi = '0';
-        mx = '1';
-        InputDataButtom(cposp,cposx,cposy,K_DIGIT,ptr_crosskey->kpos,mi,mx);
-      }
-    }
-
-    if (ptr_crosskey->kpos & K_ENT) {
-      PushEnter(cposp);
-    }
-    delay(100);
-    ptr_crosskey = getCrossKey();
-    if ((ptr_crosskey->longf==true)&&(ptr_crosskey->kpos & K_LEFT)) {
-      ptr_crosskey->longf= false;
-      ptr_crosskey->kpos = 0;
-      cmode = RUN;
-      lcdd.clear();
-      cposy = 0;
-      lcdd.setLine(cposp,cposy,pgname);
-      lcdd.PageWrite(cposp);
-    }
+    //################################################################
+  case SCHCMND:
+    opeSCH();
     break;
   }
 }
@@ -350,6 +204,51 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
     digitalWrite(7,LOW);
   }
   return(-1);
+}
+
+void msgRun1st(void) {
+  lcdd.initWriteArea(0);
+  lcdd.initWriteArea(1);
+  lcdd.cursor();
+  lcdd.blink();
+  lcdd.clear();
+  lcdd.setLine(0,0,pgname);
+  cposp = 0;
+  cposx = 0;
+  cposy = 2;
+  lcdd.PageWrite(cposp);
+  lcdd.setCursor(cposx,cposy);
+  if (Ethernet.begin(st_m.mac)==0) {
+    lcdd.setLine(0,2,"NO IP MODE");
+    lcdd.LineWrite(0,2);
+  } else {
+    lcdd.TextWrite(0,0,2,"IP:");
+    st_m.gw = Ethernet.gatewayIP();
+    st_m.ip = Ethernet.localIP();
+    st_m.dns = Ethernet.dnsServerIP();
+    cposx = 3;
+    lcdd.IPWrite(0,cposx,2,st_m.ip);
+  }
+}
+
+void msgCmnd1st(void) {
+  lcdd.noBlink();
+  lcdd.setLine(0,0,"Choose Menu         ");
+  lcdd.setLine(0,2,"UP/DOWN/ENT Key use ");
+  lcdd.setLine(0,3,"Exit:LEFT Key push  ");
+  cposp = 0;
+  cposx = 0;
+  cposy = 1;
+  lcdd.PageWrite(cposp);
+  lcdd.setCursor(cposx,cposy); // NO NEED break
+}
+
+void debugSerialOut(int a,int b,char *c) {
+  char t[80];
+  sprintf(t,"cmode=%d  cmenu=%d  key=%s",a,b,c);
+  Serial.begin(115200);
+  Serial.println(t);
+  Serial.end();
 }
 
 #endif
