@@ -1,0 +1,2 @@
+void opeRTC(void) {
+}

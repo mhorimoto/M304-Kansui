@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.07";
+char *pgname = "Kansui Ver0.11";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -27,7 +27,7 @@ void loop(void) {
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
-  extern void opeSCH(void);
+  extern void opeSCH(void),opeRTC(void),opeNET(void);
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
@@ -122,6 +122,12 @@ void loop(void) {
     }
     break;
     //################################################################
+  case NETCMND:
+    opeNET();
+    break;
+  case RTCCMND:
+    opeRTC();
+    break;
   case SCHCMND:
     opeSCH();
     break;
@@ -166,10 +172,7 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
     digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_UP;  // Reset Flag
     c++;
-    //    Serial.begin(115200);
-    //    Serial.print("K_UP: ");
-    //    Serial.print(c);
-    //    Serial.print(" Limit chk: ");
+
     switch(k) {
     case K_DIGIT:
       if (c<mi) {
@@ -178,18 +181,12 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
         c = mi;
       }
     }
-    //    Serial.println(c);
-    //    Serial.end();
     lcdd.CharWrite(p,x,y,c);
     digitalWrite(7,LOW);
   } else if (ud==K_DOWN) {
     digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_DOWN;  // Reset Flag
     c--;
-    //    Serial.begin(115200);
-    //    Serial.print("K_DOWN: ");
-    //    Serial.print(c);
-    //    Serial.print(" Limit chk: ");
     switch(k) {
     case K_DIGIT:
       if (c<mi) {
@@ -198,8 +195,6 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
         c = mx;
       }
     }
-    //    Serial.println(c);
-    //    Serial.end();
     lcdd.CharWrite(p,x,y,c);
     digitalWrite(7,LOW);
   }
@@ -207,6 +202,9 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
 }
 
 void msgRun1st(void) {
+  extern int mask2cidr(IPAddress);
+  int cidr;
+  
   lcdd.initWriteArea(0);
   lcdd.initWriteArea(1);
   lcdd.cursor();
@@ -226,6 +224,8 @@ void msgRun1st(void) {
     st_m.gw = Ethernet.gatewayIP();
     st_m.ip = Ethernet.localIP();
     st_m.dns = Ethernet.dnsServerIP();
+    st_m.subnet = Ethernet.subnetMask();
+    st_m.cidr   = mask2cidr(st_m.subnet);
     cposx = 3;
     lcdd.IPWrite(0,cposx,2,st_m.ip);
   }

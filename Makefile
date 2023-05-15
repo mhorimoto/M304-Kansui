@@ -3,7 +3,7 @@ all:
 
 main: main/main.touch
 
-main/main.touch: main/main.ino ~/Arduino/libraries/M304_Library/src/M304.cpp
+main/main.touch: main/main.ino main/opeNET.ino main/opeRTC.ino main/opeSCH.ino ~/Arduino/libraries/M304_Library/src/M304.cpp
 	arduino-cli compile -b arduino:avr:mega main
 	touch main/main.touch
 
