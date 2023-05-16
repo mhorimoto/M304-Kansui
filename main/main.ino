@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.11";
+char *pgname = "Kansui Ver0.12";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;

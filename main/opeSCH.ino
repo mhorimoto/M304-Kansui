@@ -3,12 +3,12 @@ void opeSCH(void) {
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
   if (fsf) {
     fsf = false;
-    lcdd.setLine(0,0,"Set Timer           ");
-    lcdd.setLine(0,1,"01 00:00 00:00 00-00");
-    lcdd.setLine(0,2,"00000000       OK/NG");
     cposp = 0;
     cposx = 0;
     cposy = 1;
+    lcdd.setLine(cposp,0,"Set Timer           ");
+    lcdd.setLine(cposp,1,"01 00:00 00:00 00-00");
+    lcdd.setLine(cposp,2,"00000000       OK/NG");
     lcdd.PageWrite(cposp);
     lcdd.setCursor(cposx,cposy); // NO NEED break
   }
