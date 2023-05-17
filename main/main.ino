@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.12";
+char *pgname = "Kansui Ver0.14";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -43,8 +43,8 @@ void loop(void) {
     } else {
       if (prvsec!=tm.Second) {
 	prvsec = tm.Second;
-	snprintf(line1,21,"%d/%02d/%02d  %02d:%02d:%02d",
-		 tm.Year+1970,tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
+	snprintf(line1,21,"%d/%02d/%02d  %02d:%02d:%02d",	
+	 tm.Year+1970,tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
 	lcdd.setLine(0,1,line1);
 	lcdd.LineWrite(0,1);
       }
