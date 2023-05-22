@@ -3,12 +3,19 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.20E";
+char *pgname = "Kansui Ver0.20G";
+
+typedef struct irrM304 {
+  byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
+};
+
+irrM304 irr_m;
+
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
 int cmode=RUN;
-int cmenu=0; // NETCONFIG
+int cmenu=NETCONFIG;
 bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
 char lbf[81];
@@ -18,7 +25,7 @@ void setup(void) {
   int w;
   m304Init();
   lcdd.begin(20,4);
-  pinMode(7,OUTPUT);
+  //  pinMode(7,OUTPUT);
   msgRun1st();
   if (debugMsgFlag(SO_MSG)) {
     Serial.begin(115200);

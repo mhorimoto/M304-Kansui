@@ -2,7 +2,7 @@ void opeSCH(void) {
   int  x,z,y,w,hr,mi,mx,io;
   unsigned int addr;
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
-  char eebuf[32];
+  char eebuf[32],lcdbuf[21];
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
   if (fsf) {
     fsf = false;
@@ -166,3 +166,5 @@ void opeSCH(void) {
     lcdd.PageWrite(cposp);
   }
 }
+
+
