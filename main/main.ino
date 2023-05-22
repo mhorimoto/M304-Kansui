@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.14";
+char *pgname = "Kansui Ver0.20C";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -11,6 +11,8 @@ int cmode=RUN;
 int cmenu=0; // NETCONFIG
 bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
+char lbf[81];
+extern bool debugMsgFlag(int);
 
 void setup(void) {
   int w;
@@ -18,6 +20,9 @@ void setup(void) {
   lcdd.begin(20,4);
   pinMode(7,OUTPUT);
   msgRun1st();
+  if (debugMsgFlag(SO_MSG)) {
+    Serial.begin(115200);
+  }
 }
 
 
@@ -61,12 +66,12 @@ void loop(void) {
   case CMND:
     cf = false;
     if (fsf) {
+      debugSerialOut(cmode,cmenu,"Begin point CMND with fsf");
       msgCmnd1st();
-      fsf = false;
-      cf = true;
     }
     ptr_crosskey = getCrossKey();
-    if (ptr_crosskey->kpos & K_LEFT) {
+    if ((ptr_crosskey->longf==true)&&(ptr_crosskey->kpos & K_LEFT)) {
+      debugSerialOut(cmode,cmenu,"Begin point CMND with K_LEFT");
       cmode = RUN;
       fsf = true;
       ptr_crosskey->longf=false;
@@ -75,14 +80,14 @@ void loop(void) {
     if (ptr_crosskey->kpos & K_UP) {
       ptr_crosskey->kpos &= ~K_UP;
       cmenu++;
-      if (cmenu>SCHCONFIG) cmenu=NETCONFIG;
+      if (cmenu>EEPROMOPE) cmenu=NETCONFIG;
       cf = true;
       debugSerialOut(cmode,cmenu,"K_UP");      
     }
     if (ptr_crosskey->kpos & K_DOWN) {
       ptr_crosskey->kpos &= ~K_DOWN;
       cmenu--;
-      if (cmenu<NETCONFIG) cmenu=SCHCONFIG;
+      if (cmenu<NETCONFIG) cmenu=EEPROMOPE;
       cf = true;
       debugSerialOut(cmode,cmenu,"K_DOWN");      
     }
@@ -91,17 +96,23 @@ void loop(void) {
       fsf   = true;
       switch(cmenu) {
       case NETCONFIG:
-	cmode = NETCMND;
+        cmode = NETCMND;
+        //opeNET();
 	break;
       case RTCCONFIG:
-	cmode = RTCCMND;
+        cmode = RTCCMND;
+        //opeRTC();
 	break;
       case SCHCONFIG:
-	cmode = SCHCMND;
+        cmode = SCHCMND;
+        //opeSCH();
 	break;
+      case EEPROMOPE:
+        cmode = EEPROMCMND;
+        break;
       default:
 	lcdd.clear();
-	cmode = RUN;
+	cmode = CMND;
 	break;
       }
     }
@@ -114,6 +125,9 @@ void loop(void) {
       break;
     case SCHCONFIG: // Schedule CONFIG
       lcdd.setLine(0,1,"  SCHEDULE config   ");
+      break;
+    case EEPROMOPE: // EEPROM Operation
+      lcdd.setLine(0,1,"  EEPROM Operation  ");
       break;
     }
     if (cf) {
@@ -131,6 +145,9 @@ void loop(void) {
   case SCHCMND:
     opeSCH();
     break;
+  case EEPROMCMND:
+    opeEEPROM();
+    break;
   }
 }
 
@@ -139,7 +156,9 @@ void PushEnter(int p) {
   int x,y;
   extern struct KYBDMEM *ptr_crosskey;
   ptr_crosskey->kpos &= ~K_ENT;  // Reset Flag
-  Serial.begin(115200);
+  if (!debugMsgFlag(SO_MSG)) {
+    Serial.begin(115200);
+  }
   Serial.println("+--------------------+");
   for (y=0;y<4;y++) {
     for (x=0;x<20;x++) {
@@ -148,7 +167,9 @@ void PushEnter(int p) {
     Serial.println();
   }
   Serial.println("+--------------------+");
-  Serial.end();
+  if (!debugMsgFlag(SO_MSG)) {
+    Serial.end();
+  }
 }
 
 
@@ -232,6 +253,7 @@ void msgRun1st(void) {
 }
 
 void msgCmnd1st(void) {
+  extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
   lcdd.noBlink();
   lcdd.setLine(0,0,"Choose Menu         ");
   lcdd.setLine(0,2,"UP/DOWN/ENT Key use ");
@@ -241,14 +263,19 @@ void msgCmnd1st(void) {
   cposy = 1;
   lcdd.PageWrite(cposp);
   lcdd.setCursor(cposx,cposy); // NO NEED break
+  fsf = false;
+  cf = true;
+  ptr_crosskey->longf=false;
+  ptr_crosskey->kpos=0;
 }
 
 void debugSerialOut(int a,int b,char *c) {
   char t[80];
-  sprintf(t,"cmode=%d  cmenu=%d  key=%s",a,b,c);
-  Serial.begin(115200);
-  Serial.println(t);
-  Serial.end();
+  extern bool fsf;
+  if (debugMsgFlag(SO_MSG)) {
+    sprintf(t,"cmode=%d  cmenu=%d  fsf=%d  key=%s",a,b,fsf,c);
+    Serial.println(t);
+  }
 }
 
 #endif

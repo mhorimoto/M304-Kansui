@@ -1,6 +1,7 @@
 void opeNET(void) {
   int z,id,hr,mi,mx,io;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
+  extern bool fsf;
   if (fsf) {
     fsf = false;
     cposp = 1;
@@ -31,12 +32,13 @@ void opeNET(void) {
   if ((ptr_crosskey->longf==true)&&(ptr_crosskey->kpos & K_LEFT)) {
     ptr_crosskey->longf= false;
     ptr_crosskey->kpos = 0;
-    cmode = RUN;
+    cmode = CMND;
     fsf = true;
     lcdd.clear();
     cposy = 0;
     cposp = 0;
     lcdd.setLine(cposp,cposy,pgname);
     lcdd.PageWrite(cposp);
+    debugSerialOut(cmode,cmenu,"EXIT opeNET()");
   }
 }
