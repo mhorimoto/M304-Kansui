@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.20C";
+char *pgname = "Kansui Ver0.20E";
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 
 int cposx,cposy,cposp;
@@ -27,12 +27,12 @@ void setup(void) {
 
 
 void loop(void) {
-  int z,id,hr,mi,mx,io;
+  int x,y,z,id,hr,mi,mx,io;
   char ca,line1[21];
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
-  extern void opeSCH(void),opeRTC(void),opeNET(void);
+  extern void opeSCH(void),opeRTC(void),opeNET(void),opeRUN(int,int);
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
@@ -61,6 +61,7 @@ void loop(void) {
       cmode=CMND;
       fsf = true;
     }
+    opeRUN(tm.Hour,tm.Minute);
     break;
     //################################################################
   case CMND:
@@ -190,7 +191,7 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
   extern struct KYBDMEM *ptr_crosskey;
   c = lcdd.CharRead(p,x,y);
   if (ud==K_UP) {
-    digitalWrite(7,HIGH);
+    //digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_UP;  // Reset Flag
     c++;
 
@@ -203,9 +204,9 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
       }
     }
     lcdd.CharWrite(p,x,y,c);
-    digitalWrite(7,LOW);
+    //digitalWrite(7,LOW);
   } else if (ud==K_DOWN) {
-    digitalWrite(7,HIGH);
+    //digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_DOWN;  // Reset Flag
     c--;
     switch(k) {
@@ -217,7 +218,7 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
       }
     }
     lcdd.CharWrite(p,x,y,c);
-    digitalWrite(7,LOW);
+    //digitalWrite(7,LOW);
   }
   return(-1);
 }
