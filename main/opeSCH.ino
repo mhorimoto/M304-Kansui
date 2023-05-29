@@ -1,5 +1,5 @@
 void opeSCH(void) {
-  int  x,z,y,w,hr,mi,mx,io;
+  int  x,z,y,w,hr,mi,mx,io,ic;
   unsigned int addr;
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
   char eebuf[32],lcdbuf[21];
@@ -10,9 +10,8 @@ void opeSCH(void) {
     cposx = 0;
     cposy = 1;
     lcdd.setLine(cposp,0,"Set Timer           ");
-    lcdd.setLine(cposp,1,"01 00:00 00:00 00-00");
-    lcdd.setLine(cposp,2,"RLY:00000000  OK=ENT");
     lcdd.setLine(cposp,3," 0:BREAK  1:MAKE    ");
+    getSCHData(cposp,0);
     lcdd.PageWrite(cposp);
     lcdd.setCursor(cposx,cposy);
   }
@@ -40,11 +39,13 @@ void opeSCH(void) {
       if (cposx>11) {
         cposx=0;
         cposy=1;
+	io = lcdd.IntRead(cposp,0,1,2);
       }
       break;
     default:
       cposx=0;
       cposy=1;
+      io = lcdd.IntRead(cposp,0,1,2);
       break;
     }
   }
@@ -78,6 +79,7 @@ void opeSCH(void) {
     default:
       cposx=0;
       cposy=1;
+      io = lcdd.IntRead(cposp,0,1,2);
       break;
     }
   }
@@ -105,6 +107,7 @@ void opeSCH(void) {
       break;
     default:
       mx = '9';
+      io = lcdd.IntRead(cposp,0,1,2);
     }
     InputDataButtom(cposp,cposx,cposy,K_DIGIT,ptr_crosskey->kpos,mi,mx);
   } else if (cposy==2) {
@@ -154,6 +157,11 @@ void opeSCH(void) {
     debugSerialOut(cmode,cmenu,eebuf);
   }
   delay(100);
+  ic = lcdd.IntRead(cposp,0,1,2);
+  if (ic!=io) {
+    getSCHData(cposp,ic);
+    lcdd.PageWrite(cposp);
+  }
   ptr_crosskey = getCrossKey();
   if ((ptr_crosskey->longf==true)&&(ptr_crosskey->kpos & K_LEFT)) {
     ptr_crosskey->longf= false;
@@ -167,4 +175,43 @@ void opeSCH(void) {
   }
 }
 
-
+void getSCHData(int p,int id) {
+  int x,y,z;
+  unsigned int addr;
+  byte sthr,stmn,edhr,edmn,inmn,dumn,rly[2],rlyb[2];
+  char lcdbuf[21];
+  addr = 0x1000+id*0x10;
+  sthr = atmem.read(addr);
+  stmn = atmem.read(addr+1);
+  edhr = atmem.read(addr+2);
+  edmn = atmem.read(addr+3);
+  inmn = atmem.read(addr+4);
+  dumn = atmem.read(addr+5);
+  rly[0] = atmem.read(addr+14);
+  rly[1] = atmem.read(addr+15);
+  if ((sthr==0xff)||((sthr==0)&&(stmn==0)&&(edhr==0)&&(edmn==0))) {
+    sthr = 0;
+    stmn = 0;
+    edhr = 0;
+    edmn = 0;
+    inmn = 0;
+    dumn = 0;
+    rly[0] = 0;
+    rly[1] = 0;
+  }
+  sprintf(lcdbuf,"%02d %02d:%02d %02d:%02d %02d-%02d",
+	  id,sthr,stmn,edhr,edmn,inmn,dumn);
+  lcdd.setLine(p,1,lcdbuf);
+  lcdd.setLine(p,2,"RLY:00000000  OK=ENT");
+  x = 4;
+  for(z=0;z<2;z++) {
+    for(y=6;y>=0;y-=2) {
+      if ((rly[z]>>y)&0x1) {
+	lcdd.setWriteChar(p,x,2,'1');
+      } else {
+	lcdd.setWriteChar(p,x,2,'0');
+      }
+      x++;
+    }
+  }
+}

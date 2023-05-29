@@ -3,7 +3,7 @@
 #if _M304_H_V < 106
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.20G";
+char *pgname = "Kansui Ver0.20K";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
