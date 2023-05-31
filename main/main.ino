@@ -1,9 +1,9 @@
 #include <M304.h>
 
-#if _M304_H_V < 106
+#if _M304_H_V < 108
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver0.20K";
+char *pgname = "Kansui Ver1.00";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -16,6 +16,8 @@ LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 int cposx,cposy,cposp;
 int cmode=RUN;
 int cmenu=NETCONFIG;
+int rlyttl[8];
+
 bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
 char lbf[81];
@@ -25,17 +27,19 @@ void setup(void) {
   int w;
   m304Init();
   lcdd.begin(20,4);
-  //  pinMode(7,OUTPUT);
   msgRun1st();
   if (debugMsgFlag(SO_MSG)) {
     Serial.begin(115200);
+  }
+  for(w=0;w<8;w++) {
+    rlyttl[w] = 0;
   }
 }
 
 
 void loop(void) {
-  int x,y,z,id,hr,mi,mx,io;
-  char ca,line1[21];
+  int x,y,z,id,hr,mi,mx,io,minsec;
+  char ca,line1[21],t[81];
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
@@ -50,15 +54,37 @@ void loop(void) {
       fsf = false;
     }
     if (RTC.read(tm)==0) {
-      lcdd.setLine(0,1,"NO RTC PLS SETUP    ");
-      lcdd.LineWrite(0,1);
+      lcdd.setLine(cposp,1,"NO RTC PLS SETUP    ");
+      lcdd.LineWrite(cposp,1);
     } else {
       if (prvsec!=tm.Second) {
 	prvsec = tm.Second;
 	snprintf(line1,21,"%d/%02d/%02d  %02d:%02d:%02d",	
 	 tm.Year+1970,tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
-	lcdd.setLine(0,1,line1);
-	lcdd.LineWrite(0,1);
+	lcdd.setLine(cposp,1,line1);
+	lcdd.LineWrite(cposp,1);
+	opeRUN(tm.Hour,tm.Minute);
+	Serial.println(t);
+	minsec = 0;
+	for (x=0;x<8;x++) {
+	  if (rlyttl[x]>0) {
+	    if (minsec==0) minsec = rlyttl[x];
+	    if (minsec>rlyttl[x]) {
+	      minsec = rlyttl[x];
+	    }
+	    digitalWrite(RLY1+x,LOW);
+	    rlyttl[x]--;
+	  } else {
+	    digitalWrite(RLY1+x,HIGH);
+	  }
+	}
+	if (minsec>0) {
+	  snprintf(line1,21,"REMAINING=%3d",minsec);
+	} else {
+	  snprintf(line1,21,"ALL BREAK          ");
+	}
+	lcdd.setLine(cposp,3,line1);
+	lcdd.LineWrite(cposp,3);
       }
     }
     ptr_crosskey = getCrossKey();
@@ -68,7 +94,6 @@ void loop(void) {
       cmode=CMND;
       fsf = true;
     }
-    opeRUN(tm.Hour,tm.Minute);
     break;
     //################################################################
   case CMND:
@@ -198,7 +223,6 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
   extern struct KYBDMEM *ptr_crosskey;
   c = lcdd.CharRead(p,x,y);
   if (ud==K_UP) {
-    //digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_UP;  // Reset Flag
     c++;
 
@@ -211,9 +235,7 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
       }
     }
     lcdd.CharWrite(p,x,y,c);
-    //digitalWrite(7,LOW);
   } else if (ud==K_DOWN) {
-    //digitalWrite(7,HIGH);
     ptr_crosskey->kpos &= ~K_DOWN;  // Reset Flag
     c--;
     switch(k) {
@@ -225,7 +247,6 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
       }
     }
     lcdd.CharWrite(p,x,y,c);
-    //digitalWrite(7,LOW);
   }
   return(-1);
 }
