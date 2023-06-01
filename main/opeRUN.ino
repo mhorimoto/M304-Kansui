@@ -20,7 +20,6 @@ void opeRUN(int hr,int mn) {
 }
 
 void timeDecision(int id,int curhr,int curmn) {
-  static bool countStart;
   byte d,sthr,stmn,edhr,edmn,inmn,dumn,s[2];
   int  i,j,k,addr,sttime,edtime,inmntm,dumntm,startmin,curtim,pmin;
   char t[81];
@@ -37,9 +36,10 @@ void timeDecision(int id,int curhr,int curmn) {
   edtime = edhr * 60 + edmn;
   inmntm = (int)atmem.read(addr+INMN);
   dumntm = (int)atmem.read(addr+DUMN);
-
+  if ((inmntm*dumntm)==0) return; // If either is 0, the process is aborted and returns.
+  
   curtim = curhr*60+curmn;
-
+  
   for(startmin=sttime;startmin<edtime;startmin+=(inmntm+dumntm)) {
     if (startmin==curtim) {
       s[0] = atmem.read(addr+14);

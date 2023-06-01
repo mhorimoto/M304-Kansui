@@ -140,7 +140,7 @@ void opeSCH(void) {
       }
     }
     addr = 0x1000+id*0x10;
-    if ((sthr==0)&&(stmn==0)&&(edhr==0)&&(edmn==0)) {
+    if ((sthr==0)&&(stmn==0)&&(edhr==0)&&(edmn==0)||(inmn==0)||(dumn==0)) {
       atmem.write(addr,0xff);
     } else {
       atmem.write(addr   ,sthr);
