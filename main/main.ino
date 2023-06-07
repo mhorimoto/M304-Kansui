@@ -1,4 +1,5 @@
 #include <M304.h>
+#include <EthernetUdp2.h>
 
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
