@@ -3,7 +3,7 @@
 #if _M304_H_V < 108
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.00";
+char *pgname = "Kansui Ver1.00C";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -64,7 +64,6 @@ void loop(void) {
 	lcdd.setLine(cposp,1,line1);
 	lcdd.LineWrite(cposp,1);
 	opeRUN(tm.Hour,tm.Minute);
-	Serial.println(t);
 	minsec = 0;
 	for (x=0;x<8;x++) {
 	  if (rlyttl[x]>0) {
