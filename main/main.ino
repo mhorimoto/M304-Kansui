@@ -1,9 +1,9 @@
 #include <M304.h>
 
-#if _M304_H_V < 108
+#if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.00C";
+char *pgname = "Kansui Ver1.10A";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -12,6 +12,11 @@ typedef struct irrM304 {
 irrM304 irr_m;
 
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
+EthernetUDP UECS_UDP16520;
+EthernetUDP UECS_UDP16529;
+EthernetUDP UECS_UDP16521;
+EthernetServer UECSlogserver(80);
+EthernetClient UECSclient;
 
 int cposx,cposy,cposp;
 int cmode=RUN;
@@ -22,10 +27,13 @@ bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
 char lbf[81];
 extern bool debugMsgFlag(int);
+IPAddress broadcast_ip(255, 255, 255, 255);
+
 
 void setup(void) {
   int w;
   m304Init();
+  UECS_UDP16520.begin(16520);
   lcdd.begin(20,4);
   msgRun1st();
   if (debugMsgFlag(SO_MSG)) {
