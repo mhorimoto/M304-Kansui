@@ -1,9 +1,9 @@
 #include <M304.h>
 
-#if _M304_H_V < 108
+#if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.00C";
+char *pgname = "Kansui Ver1.10";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
