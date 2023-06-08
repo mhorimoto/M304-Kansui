@@ -16,8 +16,6 @@ void opeRUN(int hr,int mn) {
 	timeDecision(id,hr,mn);
       }
     }
-    //    UECS_UDP16520.beginPacket(broadcast_ip, 16520);
-    //    UECS_UDP16520.write("opeRUN");
     //    if(UECS_UDP16520.endPacket()==0) {
     //      lcdd.setLine(cposp,3,"UDP send fail");
     //      lcdd.LineWrite(cposp,3);

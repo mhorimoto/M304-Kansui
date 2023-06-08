@@ -4,7 +4,7 @@
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.10A";
+char *pgname = "Kansui Ver1.20D";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -28,13 +28,11 @@ bool cf,fsf=true;
 byte ip[4] = { 192,168,0,177 };
 char lbf[81];
 extern bool debugMsgFlag(int);
-IPAddress broadcast_ip(255, 255, 255, 255);
 
 
 void setup(void) {
-  int w;
+  int w,j;
   m304Init();
-  UECS_UDP16520.begin(16520);
   lcdd.begin(20,4);
   msgRun1st();
   if (debugMsgFlag(SO_MSG)) {
@@ -43,11 +41,18 @@ void setup(void) {
   for(w=0;w<8;w++) {
     rlyttl[w] = 0;
   }
+  Ethernet.init(53);
+  UECS_UDP16520.begin(2220);
+  j = UECS_UDP16520.beginPacket("192.168.11.255", 16520);
+  debugSerialOut(0,j,"beginPacket return");
+  UECS_UDP16520.write("start",5);
+  j = UECS_UDP16520.endPacket();
+  debugSerialOut(0,j,"endPacket return");
 }
 
 
 void loop(void) {
-  int x,y,z,id,hr,mi,mx,io,minsec;
+  int x,y,z,id,hr,mi,mx,io,minsec,j;
   char ca,line1[21],t[81];
   static char pca;
   static int prvsec;
@@ -73,6 +78,13 @@ void loop(void) {
 	lcdd.setLine(cposp,1,line1);
 	lcdd.LineWrite(cposp,1);
 	opeRUN(tm.Hour,tm.Minute);
+    debugSerialOut(tm.Hour,tm.Minute,"opeRUN");
+    j = UECS_UDP16520.beginPacket("192.168.11.255", 16520);
+    debugSerialOut(tm.Hour,j,"beginPacket return");
+    j = UECS_UDP16520.write("opeRUN",6);
+    debugSerialOut(tm.Hour,j,"write return");
+    j = UECS_UDP16520.endPacket();
+    debugSerialOut(tm.Hour,j,"endPacket return");
 	minsec = 0;
 	for (x=0;x<8;x++) {
 	  if (rlyttl[x]>0) {
