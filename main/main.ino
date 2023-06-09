@@ -4,7 +4,7 @@
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.20D";
+char *pgname = "Kansui Ver1.20E";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -43,11 +43,16 @@ void setup(void) {
   }
   Ethernet.init(53);
   UECS_UDP16520.begin(2220);
-  j = UECS_UDP16520.beginPacket("192.168.11.255", 16520);
+  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
   debugSerialOut(0,j,"beginPacket return");
   UECS_UDP16520.write("start",5);
   j = UECS_UDP16520.endPacket();
   debugSerialOut(0,j,"endPacket return");
+  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
+  debugSerialOut(0,j,"beginPacket2 return");
+  UECS_UDP16520.write("start2",6);
+  j = UECS_UDP16520.endPacket();
+  debugSerialOut(0,j,"endPacket2 return");
 }
 
 
@@ -61,6 +66,11 @@ void loop(void) {
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
+  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
+  debugSerialOut(0,j,"beginPacket2 return");
+  UECS_UDP16520.write("loop",6);
+  j = UECS_UDP16520.endPacket();
+  debugSerialOut(0,j,"endPacket2 return");
   switch(cmode) {
   case RUN:
     if (fsf) {
@@ -79,7 +89,7 @@ void loop(void) {
 	lcdd.LineWrite(cposp,1);
 	opeRUN(tm.Hour,tm.Minute);
     debugSerialOut(tm.Hour,tm.Minute,"opeRUN");
-    j = UECS_UDP16520.beginPacket("192.168.11.255", 16520);
+    j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
     debugSerialOut(tm.Hour,j,"beginPacket return");
     j = UECS_UDP16520.write("opeRUN",6);
     debugSerialOut(tm.Hour,j,"write return");
