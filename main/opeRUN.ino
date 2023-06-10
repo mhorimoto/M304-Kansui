@@ -8,6 +8,7 @@ void opeRUN(int hr,int mn) {
   char t[81];
   extern int rlyttl[];
 
+  debugSerialOut(hr,mn,"Enter opeRUN()");
   if (mn!=pmn) {
     pmn = mn;
     for(id=0;id<100;id++) {
@@ -16,12 +17,8 @@ void opeRUN(int hr,int mn) {
 	timeDecision(id,hr,mn);
       }
     }
-    //    if(UECS_UDP16520.endPacket()==0) {
-    //      lcdd.setLine(cposp,3,"UDP send fail");
-    //      lcdd.LineWrite(cposp,3);
-    //      //      UECSresetEthernet();//when udpsend failed,reset ethernet status
-    //    }
   }
+  debugSerialOut(hr,mn,"Exit opeRUN()");
 }
 
 void timeDecision(int id,int curhr,int curmn) {

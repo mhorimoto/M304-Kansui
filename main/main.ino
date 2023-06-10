@@ -1,10 +1,11 @@
 #include <M304.h>
-#include <EthernetUdp2.h>
+#include <avr/wdt.h>
+/* #define CCMFMT "<?xml version=\"1.0\"?><UECS ver=\"1.00-E10\"><DATA type=\"%s\" room=\"%d\" region=\"%d\" order=\"%d\" priority=\"%d\">%s</DATA><IP>%s</IP></UECS>"; */
 
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.20E";
+char *pgname = "Kansui Ver1.20H";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -13,11 +14,12 @@ typedef struct irrM304 {
 irrM304 irr_m;
 
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
-EthernetUDP UECS_UDP16520;
-EthernetUDP UECS_UDP16529;
-EthernetUDP UECS_UDP16521;
-EthernetServer UECSlogserver(80);
-EthernetClient UECSclient;
+EthernetUDP UDP16520;
+//EthernetUDP UECS_UDP16529;
+//EthernetUDP UECS_UDP16521;
+//EthernetServer UECSlogserver(80);
+//EthernetClient UECSclient;
+IPAddress broadcastIP;
 
 int cposx,cposy,cposp;
 int cmode=RUN;
@@ -34,31 +36,31 @@ void setup(void) {
   int w,j;
   m304Init();
   lcdd.begin(20,4);
+  if (Ethernet.begin(st_m.mac)==0) {
+    lcdd.setLine(0,2,"NO NET MODE");
+    lcdd.LineWrite(0,2);
+  }
   msgRun1st();
   if (debugMsgFlag(SO_MSG)) {
     Serial.begin(115200);
+    Serial.println(st_m.gw);
+    Serial.println(st_m.ip);
+    Serial.println(st_m.dns);
+    Serial.println(st_m.subnet);
+    Serial.println(st_m.cidr);
+    Serial.println(broadcastIP);
   }
   for(w=0;w<8;w++) {
     rlyttl[w] = 0;
   }
-  Ethernet.init(53);
-  UECS_UDP16520.begin(2220);
-  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
-  debugSerialOut(0,j,"beginPacket return");
-  UECS_UDP16520.write("start",5);
-  j = UECS_UDP16520.endPacket();
-  debugSerialOut(0,j,"endPacket return");
-  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
-  debugSerialOut(0,j,"beginPacket2 return");
-  UECS_UDP16520.write("start2",6);
-  j = UECS_UDP16520.endPacket();
-  debugSerialOut(0,j,"endPacket2 return");
+  UDP16520.begin(16520);
 }
 
 
 void loop(void) {
   int x,y,z,id,hr,mi,mx,io,minsec,j;
-  char ca,line1[21],t[81];
+  char ca,line1[21];
+  char *xmlDT PROGMEM = CCMFMT;
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
@@ -66,10 +68,17 @@ void loop(void) {
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
-  j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
+  j = UDP16520.beginPacket(broadcastIP, 16520);
+  debugSerialOut(0,j,"beginPacket return");
+  strcpy(lbf,"setup()=1");
+  UDP16520.write(lbf);
+  j = UDP16520.endPacket();
+  debugSerialOut(0,j,"endPacket return");
+  j = UDP16520.beginPacket(broadcastIP, 16520);
   debugSerialOut(0,j,"beginPacket2 return");
-  UECS_UDP16520.write("loop",6);
-  j = UECS_UDP16520.endPacket();
+  strcpy(lbf,"setup()=2");
+  UDP16520.write(lbf);
+  j = UDP16520.endPacket();
   debugSerialOut(0,j,"endPacket2 return");
   switch(cmode) {
   case RUN:
@@ -88,13 +97,6 @@ void loop(void) {
 	lcdd.setLine(cposp,1,line1);
 	lcdd.LineWrite(cposp,1);
 	opeRUN(tm.Hour,tm.Minute);
-    debugSerialOut(tm.Hour,tm.Minute,"opeRUN");
-    j = UECS_UDP16520.beginPacket("255.255.255.255", 16520);
-    debugSerialOut(tm.Hour,j,"beginPacket return");
-    j = UECS_UDP16520.write("opeRUN",6);
-    debugSerialOut(tm.Hour,j,"write return");
-    j = UECS_UDP16520.endPacket();
-    debugSerialOut(tm.Hour,j,"endPacket return");
 	minsec = 0;
 	for (x=0;x<8;x++) {
 	  if (rlyttl[x]>0) {
@@ -283,7 +285,7 @@ uint8_t InputDataButtom(int p,int x,int y,int k,uint8_t ud,int mi='0',int mx='9'
 
 void msgRun1st(void) {
   extern int mask2cidr(IPAddress);
-  int cidr;
+  int cidr,i;
   
   lcdd.initWriteArea(0);
   lcdd.initWriteArea(1);
@@ -296,8 +298,8 @@ void msgRun1st(void) {
   cposy = 2;
   lcdd.PageWrite(cposp);
   lcdd.setCursor(cposx,cposy);
-  if (Ethernet.begin(st_m.mac)==0) {
-    lcdd.setLine(0,2,"NO IP MODE");
+  if (Ethernet.maintain()!=0) {
+    lcdd.setLine(0,2,"NIC IS NO W5500");
     lcdd.LineWrite(0,2);
   } else {
     lcdd.TextWrite(0,0,2,"IP:");
@@ -306,6 +308,9 @@ void msgRun1st(void) {
     st_m.dns = Ethernet.dnsServerIP();
     st_m.subnet = Ethernet.subnetMask();
     st_m.cidr   = mask2cidr(st_m.subnet);
+    for(i=0;i<4;i++) {
+      broadcastIP[i] = ~st_m.subnet[i]|st_m.ip[i];
+    }
     cposx = 3;
     lcdd.IPWrite(0,cposx,2,st_m.ip);
   }
