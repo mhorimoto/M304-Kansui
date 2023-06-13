@@ -1,3 +1,9 @@
+# 灌水時間を設定するEEPROMのメモリマップ
+
+0x1000〜0x1640 (00..99)
+16bytes/1record
+
+
 START   HHMM
 END     HHMM
 TIMING  MMdd
@@ -88,3 +94,20 @@ oooooooo リレーのMAKE/BREAKを表現する。左からRLY1,2,3,4,5,6,7,8で�
 15:47 灌水停止
   |      |
 16:00 END時刻に達したので灌水しない。
+
+
+
+# CCM typeを記録するメモリマップ
+
+0x0100〜0x02ff (00..15)
+32bytes/1record
+00=cnd
+
+byte位置 
+00: enable=1/disable!=1
+01: room
+02: region
+03-04: order (low-highの順)
+05: priority
+06-25: ccm type名
+26-31: 予約
