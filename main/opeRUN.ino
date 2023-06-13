@@ -5,7 +5,7 @@ void opeRUN(int hr,int mn) {
   int id, a,i,j,k;
   byte s[2];
   int r;
-  char t[81];
+  char t[81],buf[8];
   extern int rlyttl[];
 
   debugSerialOut(hr,mn,"Enter opeRUN()");
@@ -16,6 +16,9 @@ void opeRUN(int hr,int mn) {
       if (atmem.read(a)!=0xff) {
 	timeDecision(id,hr,mn);
       }
+    }
+    for (r=1;r<9;r++) {
+      sendUECSpacket(r,itoa(rlyttl[r-1],buf,DEC));
     }
   }
   debugSerialOut(hr,mn,"Exit opeRUN()");
@@ -59,3 +62,5 @@ void timeDecision(int id,int curhr,int curmn) {
     }
   }
 }
+
+

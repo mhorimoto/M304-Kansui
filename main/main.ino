@@ -1,11 +1,10 @@
 #include <M304.h>
 #include <avr/wdt.h>
-/* #define CCMFMT "<?xml version=\"1.0\"?><UECS ver=\"1.00-E10\"><DATA type=\"%s\" room=\"%d\" region=\"%d\" order=\"%d\" priority=\"%d\">%s</DATA><IP>%s</IP></UECS>"; */
 
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.20H";
+char *pgname = "Kansui Ver1.20Y";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -34,6 +33,7 @@ extern bool debugMsgFlag(int);
 
 void setup(void) {
   int w,j;
+  char ccm_type[21];
   m304Init();
   lcdd.begin(20,4);
   if (Ethernet.begin(st_m.mac)==0) {
@@ -53,14 +53,41 @@ void setup(void) {
   for(w=0;w<8;w++) {
     rlyttl[w] = 0;
   }
+  for (j=0;j<20;j++) {
+    ccm_type[j] = 0;
+  }
+  strcpy(ccm_type,"cnd.aMC");
+  j = digitalRead(SW_SAFE);
+  if (j==LOW) {
+    for(w=0;w<0x7;w++) {
+      if (ccm_type[w]!=atmem.read(w+0x106)) {
+        initEEPROM_UECS();
+        w = 8;
+        break;
+      }
+    }
+  }
   UDP16520.begin(16520);
+  for (j=0;j<20;j++) {
+    ccm_type[j] = 0;
+  }
+  strcpy(ccm_type,"cnd.aMC");
+  j = digitalRead(SW_SAFE);
+  if (j==LOW) {
+    for(w=0;w<0x7;w++) {
+      if (ccm_type[w]!=atmem.read(w+0x106)) {
+        initEEPROM_UECS();
+        w = 8;
+        break;
+      }
+    }
+  }
 }
 
 
 void loop(void) {
   int x,y,z,id,hr,mi,mx,io,minsec,j;
   char ca,line1[21];
-  char *xmlDT PROGMEM = CCMFMT;
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
@@ -68,18 +95,11 @@ void loop(void) {
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
 
-  j = UDP16520.beginPacket(broadcastIP, 16520);
-  debugSerialOut(0,j,"beginPacket return");
-  strcpy(lbf,"setup()=1");
-  UDP16520.write(lbf);
-  j = UDP16520.endPacket();
-  debugSerialOut(0,j,"endPacket return");
-  j = UDP16520.beginPacket(broadcastIP, 16520);
-  debugSerialOut(0,j,"beginPacket2 return");
-  strcpy(lbf,"setup()=2");
-  UDP16520.write(lbf);
-  j = UDP16520.endPacket();
-  debugSerialOut(0,j,"endPacket2 return");
+  if (digitalRead(SW_SAFE)==0) {
+    lcdd.setLine(0,1,"  EEPROM Operation  ");
+    lcdd.LineWrite(0,1);
+    opeEEPROM();
+  }
   switch(cmode) {
   case RUN:
     if (fsf) {
@@ -117,6 +137,9 @@ void loop(void) {
 	}
 	lcdd.setLine(cposp,3,line1);
 	lcdd.LineWrite(cposp,3);
+        //
+        sendUECSpacket(0,"0");
+        //
       }
     }
     ptr_crosskey = getCrossKey();
@@ -340,6 +363,87 @@ void debugSerialOut(int a,int b,char *c) {
     sprintf(t,"cmode=%d  cmenu=%d  fsf=%d  key=%s",a,b,fsf,c);
     Serial.println(t);
   }
+}
+
+char *itoaddr(IPAddress a) {
+  char ia[16],*iap;
+  iap = &ia[0];
+  sprintf(iap,"%d.%d.%d.%d",a[0],a[1],a[2],a[3]);
+  return(iap);
+}
+
+void initEEPROM_UECS(void) {
+  int w,a,j,k;
+  w = 9;      // cnd + RLY1..8
+  bool enable;
+  byte room,region,priority;
+  int  order;
+  char ccm_type[20];
+
+  enable = true;
+  room   = 1;
+  region = 1;
+  order  = 1;
+  priority = 15;
+  for (k=0;k<w;k++) {
+    for (j=0;j<20;j++) {
+      ccm_type[j] = 0;
+    }
+    if (k==0) {
+      strcpy(ccm_type,"cnd.aMC");
+    } else if (k==5) {
+      sprintf(ccm_type,"AirHumFogopr.%d",k);
+    } else {
+      sprintf(ccm_type,"Irriopr.%d",k);
+    }
+    if (k==0) {
+      a = 0x100;
+    } else {
+      a += 0x20;
+    }
+    atmem.write(a,enable);
+    atmem.write(a+1,room);
+    atmem.write(a+2,region);
+    atmem.write(a+3,(order&0xff));
+    atmem.write(a+4,(order>>8)&0xff);
+    atmem.write(a+5,priority);
+    for (j=0;j<20;j++) {
+      atmem.write(a+6+j,ccm_type[j]);
+    }
+  }
+}
+
+void sendUECSpacket(int id,char *v) {
+  char t[256];
+  char *xmlDT;
+  bool enable;
+  byte room,region,priority;
+  int  order,x,a,j;
+  char ccm_type[20];
+  byte ordh,ordl;
+  for(x=0;x<256;x++) {
+    t[x] = (char)NULL;
+  }
+  a = 0x100+(id*0x20);
+  xmlDT = CCMFMT;
+  enable = atmem.read(a);
+  if (enable==false) {
+    return;
+  }
+  room = atmem.read(a+1);
+  region = atmem.read(a+2);
+  ordl = atmem.read(a+3);
+  ordh = atmem.read(a+4);
+  order = (ordh<<8)+ordl;
+  priority = atmem.read(a+5);
+  for (j=0;j<20;j++) {
+    ccm_type[j] = atmem.read(a+6+j);
+  }
+  sprintf(t,xmlDT,ccm_type,room,region,
+          order,priority,v,itoaddr(broadcastIP));
+  UDP16520.beginPacket(broadcastIP, 16520);
+  UDP16520.write(t);
+  UDP16520.endPacket();
 }
 
 #endif
