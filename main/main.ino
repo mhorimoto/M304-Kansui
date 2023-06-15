@@ -4,7 +4,7 @@
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.30";
+char *pgname = "Kansui Ver1.31";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -440,7 +440,7 @@ void sendUECSpacket(int id,char *v) {
     ccm_type[j] = atmem.read(a+6+j);
   }
   sprintf(t,xmlDT,ccm_type,room,region,
-          order,priority,v,itoaddr(broadcastIP));
+          order,priority,v,itoaddr(st_m.ip));
   UDP16520.beginPacket(broadcastIP, 16520);
   UDP16520.write(t);
   UDP16520.endPacket();
