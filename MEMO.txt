@@ -97,9 +97,9 @@ oooooooo リレーのMAKE/BREAKを表現する。左からRLY1,2,3,4,5,6,7,8で�
 
 
 
-# CCM typeを記録するメモリマップ
+# CCM typeを記録するメモリマップ (CCMmap1)
 
-0x0100〜0x02ff (00..15)
+0x0100〜0x07ff (00..15)
 32bytes/1record
 00=cnd
 
@@ -111,3 +111,11 @@ byte位置
 05: priority
 06-25: ccm type名
 26-31: 予約
+
+
+# CCM の詳細を保存するメモリマップ (CCMmap2)
+
+CCMmap1に対応している。
+
+0x0800〜0x0fff
+32bytes/1record
