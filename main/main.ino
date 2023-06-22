@@ -4,7 +4,17 @@
 #if _M304_H_V < 110
 #pragma message("Library M304 is old.")
 #else
-char *pgname = "Kansui Ver1.31";
+uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
+void get_mcusr(void)     \
+  __attribute__((naked)) \
+  __attribute__((section(".init3")));
+void get_mcusr(void) {
+  mcusr_mirror = MCUSR;
+  MCUSR = 0;
+  wdt_disable();
+}
+
+char *pgname = "Kansui Ver1.32";
 
 typedef struct irrM304 {
   byte id,sthr,stmn,edhr,edmn,inmn,dumn,rly[8];
@@ -40,7 +50,9 @@ void setup(void) {
     lcdd.setLine(0,2,"NO NET MODE");
     lcdd.LineWrite(0,2);
   }
+  configure_wdt();
   msgRun1st();
+  wdt_reset();
   if (debugMsgFlag(SO_MSG)) {
     Serial.begin(115200);
     Serial.println(st_m.gw);
@@ -56,7 +68,7 @@ void setup(void) {
   for (j=0;j<20;j++) {
     ccm_type[j] = 0;
   }
-  strcpy(ccm_type,"cnd.aMC");
+  //  strcpy(ccm_type,"cnd.aMC");
   j = digitalRead(SW_SAFE);
   if (j==LOW) {
     for(w=0;w<0x7;w++) {
@@ -82,6 +94,8 @@ void setup(void) {
       }
     }
   }
+  sendUECSpacket(0,"2048"); // setup completed 0x800
+
 }
 
 
@@ -94,7 +108,8 @@ void loop(void) {
   extern void opeSCH(void),opeRTC(void),opeNET(void),opeRUN(int,int);
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
-
+ 
+  wdt_reset();
   if (digitalRead(SW_SAFE)==0) {
     lcdd.setLine(0,1,"  EEPROM Operation  ");
     lcdd.LineWrite(0,1);
@@ -149,6 +164,7 @@ void loop(void) {
       cmode=CMND;
       fsf = true;
     }
+    wdt_reset();
     break;
     //################################################################
   case CMND:
@@ -157,6 +173,7 @@ void loop(void) {
       debugSerialOut(cmode,cmenu,"Begin point CMND with fsf");
       msgCmnd1st();
     }
+    wdt_reset();
     ptr_crosskey = getCrossKey();
     if ((ptr_crosskey->longf==true)&&(ptr_crosskey->kpos & K_LEFT)) {
       debugSerialOut(cmode,cmenu,"Begin point CMND with K_LEFT");
@@ -225,15 +242,19 @@ void loop(void) {
     break;
     //################################################################
   case NETCMND:
+    wdt_reset();
     opeNET();
     break;
   case RTCCMND:
+    wdt_reset();
     opeRTC();
     break;
   case SCHCMND:
+    wdt_reset();
     opeSCH();
     break;
   case EEPROMCMND:
+    wdt_reset();
     opeEEPROM();
     break;
   }
@@ -391,7 +412,7 @@ void initEEPROM_UECS(void) {
     }
     if (k==0) {
       strcpy(ccm_type,"cnd.aMC");
-    } else if (k==5) {
+    } else if (k==6) {
       sprintf(ccm_type,"AirHumFogopr.%d",k);
     } else {
       sprintf(ccm_type,"Irriopr.%d",k);
@@ -441,9 +462,33 @@ void sendUECSpacket(int id,char *v) {
   }
   sprintf(t,xmlDT,ccm_type,room,region,
           order,priority,v,itoaddr(st_m.ip));
+  
+  if (debugMsgFlag(SO_MSG)) {
+    Serial.println(t);
+  }
   UDP16520.beginPacket(broadcastIP, 16520);
   UDP16520.write(t);
   UDP16520.endPacket();
+}
+
+void configure_wdt(void) {
+  cli();                           // disable interrupts for changing the registers
+  MCUSR = 0;                       // reset status register flags
+                                   // Put timer in interrupt-only mode:
+  WDTCSR |= 0b00011000;            // Set WDCE (5th from left) and WDE (4th from left) to enter config mode,
+                                   // using bitwise OR assignment (leaves other bits unchanged).
+  WDTCSR =  0b00001000 | 0b100001; // clr WDIE: interrupt enabled
+                                   // set WDE: reset disabled
+                                   // and set delay interval (right side of bar) to 8 seconds
+  sei();                           // re-enable interrupts
+                                   // reminder of the definitions for the time before firing
+                                   // delay interval patterns:
+                                   //  16 ms:     0b000000
+                                   //  500 ms:    0b000101
+                                   //  1 second:  0b000110
+                                   //  2 seconds: 0b000111
+                                   //  4 seconds: 0b100000
+                                   //  8 seconds: 0b100001
 }
 
 #endif

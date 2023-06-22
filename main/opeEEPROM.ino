@@ -26,11 +26,13 @@ void opeEEPROM(void) {
   }
 
   while(doing) {
+    wdt_reset();
     reading = true;
     cp = 0;
     Serial.print("% ");
     Serial.flush();
     while(reading) {
+      wdt_reset();
       ptr_crosskey->longf= false;
       ptr_crosskey->kpos = 0;
       ptr_crosskey = getCrossKey();
