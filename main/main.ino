@@ -14,7 +14,7 @@ irrM304 irr_m;
 
 LCDd lcdd(RS,RW,ENA,DB0,DB1,DB2,DB3,DB4,DB5,DB6,DB7);
 EthernetUDP UDP16520;
-//EthernetUDP UECS_UDP16529;
+EthernetUDP UECS_UDP16529;  // For nodescan and ccmscan
 //EthernetUDP UECS_UDP16521;
 //EthernetServer UECSlogserver(80);
 //EthernetClient UECSclient;
@@ -91,10 +91,11 @@ void loop(void) {
   static char pca;
   static int prvsec;
   extern struct KYBDMEM *ptr_crosskey,*getCrossKey(void);
-  extern void opeSCH(void),opeRTC(void),opeNET(void),opeRUN(int,int);
+  extern void opeSCH(void),opeRTC(void),opeNET(void),opeRUN(int,int),UECSloop(void);
   uint8_t InputDataButtom(int,int,int,int,uint8_t,int mi='0',int mx='9');
   tmElements_t tm;
-
+  
+  UECSloop();
   if (digitalRead(SW_SAFE)==0) {
     lcdd.setLine(0,1,"  EEPROM Operation  ");
     lcdd.LineWrite(0,1);
